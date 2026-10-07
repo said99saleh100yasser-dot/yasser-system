@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة المشتريات والصرفيات والعمال</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+  body { background: #eef2f7; color: #1a2a3a; min-height: 100vh; }
+
+  /* ===== الشريط العلوي ===== */
+  .topbar {
+    background: linear-gradient(90deg, #0f3057, #00587a);
+    color: #fff; padding: 12px 20px; display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  }
+  .topbar h1 { font-size: 20px; }
+  .topbar .info { font-size: 13px; opacity: .9; }
+
+  /* ===== الشريط الجانبي للتنقل ===== */
+  .nav {
+    background: #fff; display: flex; gap: 4px; padding: 8px 20px; flex-wrap: wrap;
+    border-bottom: 2px solid #0f3057; position: sticky; top: 0; z-index: 50;
+  }
+  .nav button {
+    padding: 9px 16px; border: none; background: #e3ebf3; color: #0f3057;
+    border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;
+    transition: .2s;
+  }
+  .nav button:hover { background: #c9dcec; }
+  .nav button.active { background: #0f3057; color: #fff; }
+
+  /* ===== الشاشات ===== */
+  .screen { display: none; padding: 20px; max-width: 1300px; margin: 0 auto; }
+  .screen.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1;} }
+
+  .card {
+    background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 18px;
+    box-shadow: 0 2px 12px rgba(15,48,87,.08); border: 1px solid #dbe5ee;
+  }
+  .card h2 {
+    color: #0f3057; font-size: 18px; margin-bottom: 15px; padding-bottom: 8px;
+    border-bottom: 2px solid #0f3057; display: flex; justify-content: space-between; align-items: center;
+  }
+
+  /* ===== الشبكة ===== */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 13px; font-weight: 600; color: #33566f; }
+  .field input, .field select, .field textarea {
+    padding: 9px 11px; border: 1px solid #b9cbd9; border-radius: 6px; font-size: 14px;
+    background: #fbfdff; transition: .2s; font-family: inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: #00587a; box-shadow: 0 0 0 3px rgba(0,88,122,.12);
+  }
+  .field input[readonly] { background: #eef3f8; color: #00587a; font-weight: 700; }
+
+  /* ===== الأزرار ===== */
+  .btn {
+    padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer;
+    font-weight: 600; font-size: 13px; display: inline-flex; align-items: center;
+    gap: 6px; transition: .2s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.15); }
+  .btn-primary { background: #00587a; color: #fff; }
+  .btn-success { background: #1b8a5a; color: #fff; }
+  .btn-danger  { background: #c0392b; color: #fff; }
+  .btn-warn    { background: #d68910; color: #fff; }
+  .btn-gray    { background: #7f8c8d; color: #fff; }
+  .btn-sm      { padding: 5px 10px; font-size: 12px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .actions-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px;
+    background: #f4f8fb; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #b9cbd9;
+  }
+
+  /* ===== الجداول ===== */
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; background:#fff; }
+  thead { background: #0f3057; color: #fff; }
+  th, td { padding: 9px 10px; border: 1px solid #cddce7; text-align: center; }
+  tbody tr:nth-child(even) { background: #f6fafd; }
+  tbody tr:hover { background: #e6f0f7; }
+  .total-row { background: #d8ecf5 !important; font-weight: 700; color: #0f3057; }
+
+  /* ===== إحصائيات لوحة التحكم ===== */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+  .stat {
+    background: linear-gradient(135deg, #00587a, #0f3057); color: #fff;
+    padding: 18px; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(15,48,87,.25);
+  }
+  .stat .num { font-size: 26px; font-weight: 800; margin: 6px 0; }
+  .stat .lbl { font-size: 13px; opacity: .9; }
+  .stat.green { background: linear-gradient(135deg, #1b8a5a, #0f5132); }
+  .stat.orange{ background: linear-gradient(135deg, #d68910, #9c640c); }
+  .stat.red   { background: linear-gradient(135deg, #c0392b, #7b241c); }
+
+  /* ===== شاشة الطباعة ===== */
+  #printHeader { display: none; }
+  @media print {
+    body { background: #fff; }
+    .topbar, .nav, .actions-bar, .no-print { display: none !important; }
+    .screen { display: block !important; padding: 0; }
+    .card { box-shadow: none; border: 1px solid #999; page-break-inside: avoid; }
+    #printHeader { display: block; text-align: center; margin-bottom: 15px; }
+    table { font-size: 12px; }
+  }
+
+  .section-title {
+    background: #e3ebf3; padding: 8px 12px; border-right: 4px solid #00587a;
+    border-radius: 4px; margin: 15px 0 10px; font-weight: 700; color: #0f3057;
+  }
+  .company-tag {
+    background: #00587a; color: #fff; padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; margin: 3px; display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== الشريط العلوي ===== -->
+<div class="topbar">
+  <h1>📊 نظام إدارة المشتريات والصرفيات والعمال</h1>
+  <div class="info">التاريخ: <span id="todayDate"></span> | الوقت: <span id="clock"></span></div>
+</div>
+
+<!-- ===== شريط التنقل ===== -->
+<div class="nav no-print">
+  <button class="active" onclick="showScreen('home', this)">🏠 الشاشة الرئيسية</button>
+  <button onclick="showScreen('dashboard', this)">📈 لوحة التحكم</button>
+  <button onclick="showScreen('purchases', this)">🛒 إدارة المشتريات</button>
+  <button onclick="showScreen('expenses', this)">💸 إدارة الصرفيات</button>
+  <button onclick="showScreen('workers', this)">👷 إدارة العمال</button>
+  <button onclick="showScreen('settings', this)">⚙️ الإعدادات</button>
+</div>
+
+<!-- رأس الطباعة -->
+<div id="printHeader">
+  <h2 style="color:#0f3057">نظام إدارة المشتريات والصرفيات والعمال</h2>
+  <p>تاريخ الطباعة: <span id="printDate"></span></p>
+  <hr>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1) الشاشة الرئيسية -->
+<!-- ============================================================ -->
+<div id="home" class="screen active">
+  <div class="card">
+    <h2>🏠 الشاشة الرئيسية</h2>
+    <p style="line-height:1.9; font-size:15px;">
+      مرحباً بك في <strong>نظام إدارة المشتريات والصرفيات والعمال</strong>.
+      يمكنك من خلال هذا النظام إدارة كل ما يتعلق بالمشتريات، الصرفيات اليومية،
+      وإدارة العمال، مع إمكانية الطباعة والتصدير PDF.
+    </p>
+    <div class="stats" style="margin-top:18px;">
+      <div class="stat"><div class="lbl">إجمالي المشتريات</div><div class="num" id="homeTotalPurchases">0</div></div>
+      <div class="stat green"><div class="lbl">عدد أصناف المشتريات</div><div class="num" id="homeCountPurchases">0</div></div>
+      <div class="stat orange"><div class="lbl">إجمالي الصرفيات</div><div class="num" id="homeTotalExpenses">0</div></div>
+      <div class="stat red"><div class="lbl">عدد العمال</div><div class="num" id="homeCountWorkers">0</div></div>
+    </div>
+
+    <div class="section-title">🏢 الشركات المسجلة</div>
+    <div id="homeCompanies"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 2) لوحة التحكم -->
+<!-- ============================================================ -->
+<div id="dashboard" class="screen">
+  <div class="card">
+    <h2>📈 لوحة التحكم</h2>
+    <div class="stats">
+      <div class="stat"><div class="lbl">إجمالي المشتريات</div><div class="num" id="dashTotalPurchases">0</div></div>
+      <div class="stat green"><div class="lbl">إجمالي الصرفيات اليومية</div><div class="num" id="dashTotalExpenses">0</div></div>
+      <div class="stat orange"><div class="lbl">إجمالي صرفيات العمال</div><div class="num" id="dashTotalWorkers">0</div></div>
+      <div class="stat red"><div class="lbl">صافي الرصيد</div><div class="num" id="dashBalance">0</div></div>
+    </div>
+
+    <div class="section-title">📊 ملخص آخر العمليات</div>
+    <table>
+      <thead>
+        <tr><th>#</th><th>القسم</th><th>التفاصيل</th><th>المبلغ</th></tr>
+      </thead>
+      <tbody id="dashRecentTable">
+        <tr><td colspan="4" style="color:#888;">لا توجد عمليات بعد</td></tr>
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="printScreen('dashboard')">🖨 طباعة</button>
+      <button class="btn btn-success" onclick="exportPDF('dashboard')">📄 تصدير PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 3) إدارة المشتريات -->
+<!-- ============================================================ -->
+<div id="purchases" class="screen">
+  <div class="card">
+    <h2>🛒 إدارة المشتريات</h2>
+
+    <div class="actions-bar no-print">
+      <button class="btn btn-primary" onclick="savePurchase()">💾 حفظ</button>
+      <button class="btn btn-gray" onclick="resetPurchaseForm()">🔄 تفريغ</button>
+      <button class="btn btn-warn" onclick="toggleDynamicField()">➕ إضافة حقل متعدد</button>
+      <button class="btn btn-warn" onclick="addCustomType()">🏷 إضافة نوع صنف</button>
+      <button class="btn btn-warn" onclick="addCompany()">🏢 إضافة شركة</button>
+      <button class="btn btn-primary" onclick="printScreen('purchases')">🖨 طباعة</button>
+      <button class="btn btn-success" onclick="exportPDF('purchases')">📄 تصدير PDF</button>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>رقم الصنف (تلقائي)</label>
+        <input type="text" id="p_itemNo" readonly>
+      </div>
+      <div class="field">
+        <label>اسم الصنف</label>
+        <input type="text" id="p_name" placeholder="مثال: أسمنت بورتلاندي">
+      </div>
+      <div class="field">
+        <label>الوحدة</label>
+        <select id="p_unit">
+          <option>كيس</option><option>طن</option><option>متر</option>
+          <option>قطعة</option><option>لفة</option><option>كرتون</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>الكمية</label>
+        <input type="number" id="p_qty" value="1" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>نوع الصنف</label>
+        <select id="p_type">
+          <option>أسمنت</option><option>حديد</option><option>كريني</option>
+          <option>أسلاك</option><option>أخرى</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>اسم الشركة</label>
+        <select id="p_company">
+          <option>الهوام السباعي</option><option>الحرمين</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>سعر الوحدة</label>
+        <input type="number" id="p_price" value="0" oninput="calcPurchaseTotal()">
+      </div>
+      <div class="field">
+        <label>إجمالي السعر (تلقائي/يدوي)</label>
+        <input type="number" id="p_total" value="0">
+      </div>
+      <div class="field">
+        <label>العملة</label>
+        <select id="p_currency">
+          <option value="﷼">﷼ سعودي</option>
+          <option value="$">$ دولار</option>
+          <option value="ريال">ريال يمني</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="p_date">
+      </div>
+    </div>
+
+    <!-- الحقول المتعددة المضافة -->
+    <div id="dynamicFieldsContainer"></div>
+
+    <!-- جدول المشتريات -->
+    <div class="section-title">📋 سجل المشتريات</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>اسم الصنف</th><th>الوحدة</th><th>الكمية</th>
+          <th>النوع</th><th>الشركة</th><th>سعر الوحدة</th><th>الإجمالي</th>
+          <th>العملة</th><th>التاريخ</th><th class="no-print">حذف</th>
+        </tr>
+      </thead>
+      <tbody id="purchasesTable">
+        <tr><td colspan="11" style="color:#888;">لا توجد بيانات</td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="7">الإجمالي العام</td>
+          <td id="purchasesGrandTotal">0</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 4) إدارة الصرفيات -->
+<!-- ============================================================ -->
+<div id="expenses" class="screen">
+  <div class="card">
+    <h2>💸 إدارة الصرفيات اليومية</h2>
+
+    <div class="actions-bar no-print">
+      <button class="btn btn-primary" onclick="saveExpense()">💾 حفظ</button>
+      <button class="btn btn-gray" onclick="resetExpenseForm()">🔄 تفريغ</button>
+      <button class="btn btn-warn" onclick="addExpenseStatus()">➕ إضافة حالة</button>
+      <button class="btn btn-primary" onclick="printScreen('expenses')">🖨 طباعة</button>
+      <button class="btn btn-success" onclick="exportPDF('expenses')">📄 تصدير PDF</button>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>اليوم</label>
+        <select id="e_day">
+          <option>السبت</option><option>الأحد</option><option>الإثنين</option>
+          <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option><option>الجمعة</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="e_date">
+      </div>
+      <div class="field">
+        <label>التفاصيل</label>
+        <input type="text" id="e_details" placeholder="مثال: شراء مواد بناء">
+      </div>
+      <div class="field">
+        <label>المبلغ</label>
+        <input type="number" id="e_amount" value="0">
+      </div>
+      <div class="field">
+        <label>العملة</label>
+        <select id="e_currency">
+          <option value="﷼">﷼ سعودي</option>
+          <option value="$">$ دولار</option>
+          <option value="ريال">ريال يمني</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>الحالة</label>
+        <select id="e_status">
+          <option>مواد</option><option>عمال</option>
+          <option>صرفية يومية</option><option>واصل</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>الملاحظات</label>
+        <textarea id="e_notes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
+      </div>
+    </div>
+
+    <div class="section-title">📋 سجل الصرفيات اليومية</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>اليوم</th><th>التاريخ</th><th>التفاصيل</th>
+          <th>المبلغ</th><th>العملة</th><th>الحالة</th><th>الملاحظات</th>
+          <th class="no-print">حذف</th>
+        </tr>
+      </thead>
+      <tbody id="expensesTable">
+        <tr><td colspan="9" style="color:#888;">لا توجد بيانات</td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="4">الإجمالي العام</td>
+          <td id="expensesGrandTotal">0</td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 5) إدارة العمال -->
+<!-- ============================================================ -->
+<div id="workers" class="screen">
+  <div class="card">
+    <h2>👷 إدارة العمال - سجل العمل</h2>
+
+    <div class="actions-bar no-print">
+      <button class="btn btn-primary" onclick="saveWorker()">💾 حفظ</button>
+      <button class="btn btn-gray" onclick="resetWorkerForm()">🔄 تفريغ</button>
+      <button class="btn btn-primary" onclick="printScreen('workers')">🖨 طباعة</button>
+      <button class="btn btn-success" onclick="exportPDF('workers')">📄 تصدير PDF</button>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>اليوم</label>
+        <select id="w_day">
+          <option>السبت</option><option>الأحد</option><option>الإثنين</option>
+          <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option><option>الجمعة</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="w_date">
+      </div>
+      <div class="field">
+        <label>أسماء العمال</label>
+        <input type="text" id="w_names" placeholder="مثال: أحمد، محمد، علي">
+      </div>
+      <div class="field">
+        <label>عدد العمال</label>
+        <input type="number" id="w_count" value="1">
+      </div>
+      <div class="field">
+        <label>اسم الشغل</label>
+        <input type="text" id="w_job" placeholder="مثال: بناء جدار">
+      </div>
+    </div>
+
+    <div class="section-title">📋 سجل العمل</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>اليوم</th><th>التاريخ</th><th>أسماء العمال</th>
+          <th>عدد العمال</th><th>اسم الشغل</th><th class="no-print">حذف</th>
+        </tr>
+      </thead>
+      <tbody id="workersTable">
+        <tr><td colspan="7" style="color:#888;">لا توجد بيانات</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- صرفيات العمال -->
+  <div class="card">
+    <h2>💰 صرفيات العمال</h2>
+
+    <div class="actions-bar no-print">
+      <button class="btn btn-primary" onclick="saveWorkerExpense()">💾 حفظ</button>
+      <button class="btn btn-gray" onclick="resetWorkerExpenseForm()">🔄 تفريغ</button>
+      <button class="btn btn-primary" onclick="printScreen('workers')">🖨 طباعة</button>
+      <button class="btn btn-success" onclick="exportPDF('workers')">📄 تصدير PDF</button>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>اليوم</label>
+        <select id="we_day">
+          <option>السبت</option><option>الأحد</option><option>الإثنين</option>
+          <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option><option>الجمعة</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>التاريخ</label>
+        <input type="date" id="we_date">
+      </div>
+      <div class="field">
+        <label>اسم العامل</label>
+        <input type="text" id="we_worker" placeholder="اسم العامل">
+      </div>
+      <div class="field">
+        <label>اسم الصرفية</label>
+        <input type="text" id="we_name" placeholder="مثال: يومية، سلفة، مكافأة">
+      </div>
+      <div class="field">
+        <label>المبلغ</label>
+        <input type="number" id="we_amount" value="0">
+      </div>
+    </div>
+
+    <div class="section-title">📋 سجل صرفيات العمال</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>اليوم</th><th>التاريخ</th><th>اسم العامل</th>
+          <th>اسم الصرفية</th><th>المبلغ</th><th class="no-print">حذف</th>
+        </tr>
+      </thead>
+      <tbody id="workerExpensesTable">
+        <tr><td colspan="7" style="color:#888;">لا توجد بيانات</td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="5">الإجمالي العام</td>
+          <td id="workerExpensesGrandTotal">0</td>
+          <td class="no-print"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 6) الإعدادات -->
+<!-- ============================================================ -->
+<div id="settings" class="screen">
+  <div class="card">
+    <h2>⚙️ الإعدادات</h2>
+
+    <div class="section-title">🏢 إدارة الشركات</div>
+    <div class="actions-bar no-print">
+      <input type="text" id="newCompany" placeholder="اسم الشركة الجديدة" style="padding:8px;border:1px solid #b9cbd9;border-radius:6px;">
+      <button class="btn btn-primary" onclick="addCompanyFromSettings()">➕ إضافة شركة</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>اسم الشركة</th><th class="no-print">حذف</th></tr></thead>
+      <tbody id="companiesTable"></tbody>
+    </table>
+
+    <div class="section-title">🏷 إدارة أنواع الأصناف</div>
+    <div class="actions-bar no-print">
+      <input type="text" id="newType" placeholder="نوع الصنف الجديد" style="padding:8px;border:1px solid #b9cbd9;border-radius:6px;">
+      <button class="btn btn-primary" onclick="addTypeFromSettings()">➕ إضافة نوع</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>نوع الصنف</th><th class="no-print">حذف</th></tr></thead>
+      <tbody id="typesTable"></tbody>
+    </table>
+
+    <div class="section-title">📌 إدارة حالات الصرفيات</div>
+    <div class="actions-bar no-print">
+      <input type="text" id="newStatus" placeholder="حالة جديدة" style="padding:8px;border:1px solid #b9cbd9;border-radius:6px;">
+      <button class="btn btn-primary" onclick="addStatusFromSettings()">➕ إضافة حالة</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>الحالة</th><th class="no-print">حذف</th></tr></thead>
+      <tbody id="statusTable"></tbody>
+    </table>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="printScreen('settings')">🖨 طباعة الإعدادات</button>
+      <button class="btn btn-success" onclick="exportPDF('settings')">📄 تصدير PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   البيانات الأساسية (تُحفظ في المتصفح)
+============================================================ */
+let DB = {
+  purchases: [],
+  expenses: [],
+  workers: [],
+  workerExpenses: [],
+  companies: ['الهوام السباعي', 'الحرمين'],
+  types: ['أسمنت', 'حديد', 'كريني', 'أسلاك'],
+  statuses: ['مواد', 'عمال', 'صرفية يومية', 'واصل'],
+  customFields: [],
+  itemCounter: 1
+};
+
+// تحميل البيانات المحفوظة
+function loadDB() {
+  const saved = localStorage.getItem('systemDB');
+  if (saved) {
+    try { DB = JSON.parse(saved); } catch(e){}
+  }
+}
+function saveDB() {
+  localStorage.setItem('systemDB', JSON.stringify(DB));
+}
+
+/* ============================================================
+   التنقل بين الشاشات
+============================================================ */
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else document.querySelector(`.nav button[onclick*="${id}"]`)?.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  refreshAll();
+}
+
+/* ============================================================
+   التاريخ والوقت
+============================================================ */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('ar-EG');
+  document.getElementById('todayDate').textContent = now.toLocaleDateString('ar-EG');
+  document.getElementById('printDate').textContent = now.toLocaleDateString('ar-EG') + ' - ' + now.toLocaleTimeString('ar-EG');
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ============================================================
+   توليد رقم الصنف التلقائي
+============================================================ */
+function generateItemNo() {
+  return 'ITM-' + String(DB.itemCounter).padStart(4, '0');
+}
+
+/* ============================================================
+   حساب إجمالي المشتريات
+============================================================ */
+function calcPurchaseTotal() {
+  const qty = parseFloat(document.getElementById('p_qty').value) || 0;
+  const price = parseFloat(document.getElementById('p_price').value) || 0;
+  document.getElementById('p_total').value = (qty * price).toFixed(2);
+}
+
+/* ============================================================
+   حفظ مشتريات
+============================================================ */
+function savePurchase() {
+  const name = document.getElementById('p_name').value.trim();
+  if (!name) { alert('الرجاء إدخال اسم الصنف'); return; }
+
+  const qty = parseFloat(document.getElementById('p_qty').value) || 0;
+  const price = parseFloat(document.getElementById('p_price').value) || 0;
+  const total = parseFloat(document.getElementById('p_total').value) || (qty * price);
+
+  const item = {
+    id: Date.now(),
+    itemNo: document.getElementById('p_itemNo').value || generateItemNo(),
+    name,
+    unit: document.getElementById('p_unit').value,
+    qty,
+    type: document.getElementById('p_type').value,
+    company: document.getElementById('p_company').value,
+    price,
+    total,
+    currency: document.getElementById('p_currency').value,
+    date: document.getElementById('p_date').value || new Date().toISOString().slice(0,10),
+    custom: getCustomFieldValues()
+  };
+
+  DB.purchases.push(item);
+  DB.itemCounter++;
+  saveDB();
+  renderPurchases();
+  resetPurchaseForm();
+  refreshAll();
+  alert('✅ تم حفظ الصنف بنجاح');
+}
+
+function resetPurchaseForm() {
+  document.getElementById('p_itemNo').value = generateItemNo();
+  document.getElementById('p_name').value = '';
+  document.getElementById('p_qty').value = 1;
+  document.getElementById('p_price').value = 0;
+  document.getElementById('p_total').value = 0;
+  document.getElementById('p_date').value = new Date().toISOString().slice(0,10);
+  document.querySelectorAll('.custom-field-input').forEach(i => i.value = '');
+}
+
+function renderPurchases() {
+  const tbody = document.getElementById('purchasesTable');
+  if (DB.purchases.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="color:#888;">لا توجد بيانات</td></tr>';
+    document.getElementById('purchasesGrandTotal').textContent = '0';
+    return;
+  }
+  let html = '', grand = 0;
+  DB.purchases.forEach((p, i) => {
+    grand += p.total;
+    let customCols = '';
+    DB.customFields.forEach(f => {
+      customCols += `<td>${p.custom?.[f] || '-'}</td>`;
+    });
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${p.name}</td>
+      <td>${p.unit}</td>
+      <td>${p.qty}</td>
+      <td>${p.type}</td>
+      <td>${p.company}</td>
+      <td>${p.price}</td>
+      <td>${p.total}</td>
+      <td>${p.currency}</td>
+      <td>${p.date}</td>
+      <td class="no-print"><button class="btn btn-danger btn-sm" onclick="deletePurchase(${p.id})">🗑</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  document.getElementById('purchasesGrandTotal').textContent = grand.toFixed(2);
+}
+
+function deletePurchase(id) {
+  if (!confirm('هل تريد حذف هذا الصنف؟')) return;
+  DB.purchases = DB.purchases.filter(p => p.id !== id);
+  saveDB(); renderPurchases(); refreshAll();
+}
+
+/* ============================================================
+   الحقول المتعددة (Dynamic Fields)
+============================================================ */
+function toggleDynamicField() {
+  const fieldName = prompt('اكتب اسم الحقل الجديد الذي تريد إضافته (مثال: المورد، رقم الفاتورة):');
+  if (!fieldName) return;
+  DB.customFields.push(fieldName);
+  saveDB();
+  renderDynamicFields();
+  alert('✅ تم إضافة الحقل: ' + fieldName);
+}
+
+function renderDynamicFields() {
+  const container = document.getElementById('dynamicFieldsContainer');
+  container.innerHTML = '';
+  if (DB.customFields.length === 0) return;
+  let html = '<div class="section-title">📎 حقول إضافية مخصصة</div><div class="grid">';
+  DB.customFields.forEach((f, i) => {
+    html += `<div class="field">
+      <label>${f}</label>
+      <input type="text" class="custom-field-input" data-field="${f}" placeholder="أدخل ${f}">
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function getCustomFieldValues() {
+  const vals = {};
+  document.querySelectorAll('.custom-field-input').forEach(inp => {
+    vals[inp.dataset.field] = inp.value;
+  });
+  return vals;
+}
+
+/* ============================================================
+   إدارة أنواع الأصناف والشركات
+============================================================ */
+function addCustomType() {
+  const t = prompt('اكتب نوع الصنف الجديد:');
+  if (!t) return;
+  if (!DB.types.includes(t)) DB.types.push(t);
+  saveDB(); refreshDropdowns(); renderSettingsTables();
+  alert('✅ تم إضافة النوع');
+}
+
+function addCompany() {
+  const c = prompt('اكتب اسم الشركة الجديدة:');
+  if (!c) return;
+  if (!DB.companies.includes(c)) DB.companies.push(c);
+  saveDB(); refreshDropdowns(); renderSettingsTables(); renderHomeCompanies();
+  alert('✅ تم إضافة الشركة');
+}
+
+/* ============================================================
+   حفظ صرفيات يومية
+============================================================ */
+function saveExpense() {
+  const details = document.getElementById('e_details').value.trim();
+  if (!details) { alert('الرجاء إدخال التفاصيل'); return; }
+
+  const item = {
+    id: Date.now(),
+    day: document.getElementById('e_day').value,
+    date: document.getElementById('e_date').value || new Date().toISOString().slice(0,10),
+    details,
+    amount: parseFloat(document.getElementById('e_amount').value) || 0,
+    currency: document.getElementById('e_currency').value,
+    status: document.getElementById('e_status').value,
+    notes: document.getElementById('e_notes').value
+  };
+  DB.expenses.push(item);
+  saveDB(); renderExpenses(); resetExpenseForm(); refreshAll();
+  alert('✅ تم حفظ الصرفية');
+}
+
+function resetExpenseForm() {
+  document.getElementById('e_details').value = '';
+  document.getElementById('e_amount').value = 0;
+  document.getElementById('e_notes').value = '';
+  document.getElementById('e_date').value = new Date().toISOString().slice(0,10);
+}
+
+function renderExpenses() {
+  const tbody = document.getElementById('expensesTable');
+  if (DB.expenses.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="color:#888;">لا توجد بيانات</td></tr>';
+    document.getElementById('expensesGrandTotal').textContent = '0';
+    return;
+  }
+  let html = '', grand = 0;
+  DB.expenses.forEach((e, i) => {
+    grand += e.amount;
+    html += `<tr>
+      <td>${i+1}</td><td>${e.day}</td><td>${e.date}</td><td>${e.details}</td>
+      <td>${e.amount}</td><td>${e.currency}</td><td>${e.status}</td><td>${e.notes}</td>
+      <td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteExpense(${e.id})">🗑</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  document.getElementById('expensesGrandTotal').textContent = grand.toFixed(2);
+}
+
+function deleteExpense(id) {
+  if (!confirm('حذف هذه الصرفية؟')) return;
+  DB.expenses = DB.expenses.filter(e => e.id !== id);
+  saveDB(); renderExpenses(); refreshAll();
+}
+
+function addExpenseStatus() {
+  const s = prompt('اكتب اسم الحالة الجديدة:');
+  if (!s) return;
+  if (!DB.statuses.includes(s)) DB.statuses.push(s);
+  saveDB(); refreshDropdowns(); renderSettingsTables();
+  alert('✅ تم إضافة الحالة');
+}
+
+/* ============================================================
+   إدارة العمال
+============================================================ */
+function saveWorker() {
+  const names = document.getElementById('w_names').value.trim();
+  if (!names) { alert('الرجاء إدخال أسماء العمال'); return; }
+  const item = {
+    id: Date.now(),
+    day: document.getElementById('w_day').value,
+    date: document.getElementById('w_date').value || new Date().toISOString().slice(0,10),
+    names,
+    count: parseInt(document.getElementById('w_count').value) || 1,
+    job: document.getElementById('w_job').value
+  };
+  DB.workers.push(item);
+  saveDB(); renderWorkers(); resetWorkerForm(); refreshAll();
+  alert('✅ تم حفظ سجل العمال');
+}
+
+function resetWorkerForm() {
+  document.getElementById('w_names').value = '';
+  document.getElementById('w_count').value = 1;
+  document.getElementById('w_job').value = '';
+  document.getElementById('w_date').value = new Date().toISOString().slice(0,10);
+}
+
+function renderWorkers() {
+  const tbody = document.getElementById('workersTable');
+  if (DB.workers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:#888;">لا توجد بيانات</td></tr>';
+    return;
+  }
+  let html = '';
+  DB.workers.forEach((w, i) => {
+    html += `<tr>
+      <td>${i+1}</td><td>${w.day}</td><td>${w.date}</td><td>${w.names}</td>
+      <td>${w.count}</td><td>${w.job}</td>
+      <td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteWorker(${w.id})">🗑</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function deleteWorker(id) {
+  if (!confirm('حذف سجل العامل؟')) return;
+  DB.workers = DB.workers.filter(w => w.id !== id);
+  saveDB(); renderWorkers(); refreshAll();
+}
+
+/* ============================================================
+   صرفيات العمال
+============================================================ */
+function saveWorkerExpense() {
+  const worker = document.getElementById('we_worker').value.trim();
+  const name = document.getElementById('we_name').value.trim();
+  if (!worker || !name) { alert('الرجاء إدخال اسم العامل واسم الصرفية'); return; }
+  const item = {
+    id: Date.now(),
+    day: document.getElementById('we_day').value,
+    date: document.getElementById('we_date').value || new Date().toISOString().slice(0,10),
+    worker,
+    name,
+    amount: parseFloat(document.getElementById('we_amount').value) || 0
+  };
+  DB.workerExpenses.push(item);
+  saveDB(); renderWorkerExpenses(); resetWorkerExpenseForm(); refreshAll();
+  alert('✅ تم حفظ صرفية العامل');
+}
+
+function resetWorkerExpenseForm() {
+  document.getElementById('we_worker').value = '';
+  document.getElementById('we_name').value = '';
+  document.getElementById('we_amount').value = 0;
+  document.getElementById('we_date').value = new Date().toISOString().slice(0,10);
+}
+
+function renderWorkerExpenses() {
+  const tbody = document.getElementById('workerExpensesTable');
+  if (DB.workerExpenses.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:#888;">لا توجد بيانات</td></tr>';
+    document.getElementById('workerExpensesGrandTotal').textContent = '0';
+    return;
+  }
+  let html = '', grand = 0;
+  DB.workerExpenses.forEach((w, i) => {
+    grand += w.amount;
+    html += `<tr>
+      <td>${i+1}</td><td>${w.day}</td><td>${w.date}</td><td>${w.worker}</td>
+      <td>${w.name}</td><td>${w.amount}</td>
+      <td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteWorkerExpense(${w.id})">🗑</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  document.getElementById('workerExpensesGrandTotal').textContent = grand.toFixed(2);
+}
+
+function deleteWorkerExpense(id) {
+  if (!confirm('حذف هذه الصرفية؟')) return;
+  DB.workerExpenses = DB.workerExpenses.filter(w => w.id !== id);
+  saveDB(); renderWorkerExpenses(); refreshAll();
+}
+
+/* ============================================================
+   الإعدادات - إضافة من الجداول
+============================================================ */
+function addCompanyFromSettings() {
+  const c = document.getElementById('newCompany').value.trim();
+  if (!c) return;
+  if (!DB.companies.includes(c)) DB.companies.push(c);
+  saveDB(); renderSettingsTables(); refreshDropdowns(); renderHomeCompanies();
+  document.getElementById('newCompany').value = '';
+}
+
+function addTypeFromSettings() {
+  const t = document.getElementById('newType').value.trim();
+  if (!t) return;
+  if (!DB.types.includes(t)) DB.types.push(t);
+  saveDB(); renderSettingsTables(); refreshDropdowns();
+  document.getElementById('newType').value = '';
+}
+
+function addStatusFromSettings() {
+  const s = document.getElementById('newStatus').value.trim();
+  if (!s) return;
+  if (!DB.statuses.includes(s)) DB.statuses.push(s);
+  saveDB(); renderSettingsTables(); refreshDropdowns();
+  document.getElementById('newStatus').value = '';
+}
+
+function renderSettingsTables() {
+  const compT = document.getElementById('companiesTable');
+  compT.innerHTML = DB.companies.map((c, i) =>
+    `<tr><td>${i+1}</td><td>${c}</td><td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteCompany(${i})">🗑</button></td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:#888;">لا توجد شركات</td></tr>';
+
+  const typeT = document.getElementById('typesTable');
+  typeT.innerHTML = DB.types.map((t, i) =>
+    `<tr><td>${i+1}</td><td>${t}</td><td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteType(${i})">🗑</button></td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:#888;">لا توجد أنواع</td></tr>';
+
+  const statT = document.getElementById('statusTable');
+  statT.innerHTML = DB.statuses.map((s, i) =>
+    `<tr><td>${i+1}</td><td>${s}</td><td class="no-print"><button class="btn btn-danger btn-sm" onclick="deleteStatus(${i})">🗑</button></td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:#888;">لا توجد حالات</td></tr>';
+}
+
+function deleteCompany(i) { if(confirm('حذف الشركة؟')) { DB.companies.splice(i,1); saveDB(); renderSettingsTables(); refreshDropdowns(); renderHomeCompanies(); } }
+function deleteType(i)    { if(confirm('حذف النوع؟'))   { DB.types.splice(i,1);     saveDB(); renderSettingsTables(); refreshDropdowns(); } }
+function deleteStatus(i)  { if(confirm('حذف الحالة؟'))  { DB.statuses.splice(i,1);  saveDB(); renderSettingsTables(); refreshDropdowns(); } }
+
+/* ============================================================
+   تحديث القوائم المنسدلة
+============================================================ */
+function refreshDropdowns() {
+  // الشركات
+  const pComp = document.getElementById('p_company');
+  pComp.innerHTML = DB.companies.map(c => `<option>${c}</option>`).join('');
+
+  // الأنواع
+  const pType = document.getElementById('p_type');
+  pType.innerHTML = DB.types.map(t => `<option>${t}</option>`).join('') + '<option>أخرى</option>';
+
+  // الحالات
+  const eStat = document.getElementById('e_status');
+  eStat.innerHTML = DB.statuses.map(s => `<option>${s}</option>`).join('');
+}
+
+/* ============================================================
+   عرض شركات الشاشة الرئيسية
+============================================================ */
+function renderHomeCompanies() {
+  const div = document.getElementById('homeCompanies');
+  div.innerHTML = DB.companies.map(c => `<span class="company-tag">🏢 ${c}</span>`).join('');
+}
+
+/* ============================================================
+   إحصائيات الشاشات
+============================================================ */
+function refreshAll() {
+  // الشاشة الرئيسية
+  const totalPurchases = DB.purchases.reduce((s,p) => s+p.total, 0);
+  const totalExpenses = DB.expenses.reduce((s,e) => s+e.amount, 0);
+  const totalWorkerExp = DB.workerExpenses.reduce((s,w) => s+w.amount, 0);
+
+  document.getElementById('homeTotalPurchases').textContent = totalPurchases.toFixed(2);
+  document.getElementById('homeCountPurchases').textContent = DB.purchases.length;
+  document.getElementById('homeTotalExpenses').textContent = totalExpenses.toFixed(2);
+  document.getElementById('homeCountWorkers').textContent = DB.workers.reduce((s,w)=>s+w.count,0);
+
+  // لوحة التحكم
+  document.getElementById('dashTotalPurchases').textContent = totalPurchases.toFixed(2);
+  document.getElementById('dashTotalExpenses').textContent = totalExpenses.toFixed(2);
+  document.getElementById('dashTotalWorkers').textContent = totalWorkerExp.toFixed(2);
+  document.getElementById('dashBalance').textContent = (totalPurchases - totalExpenses - totalWorkerExp).toFixed(2);
+
+  // آخر العمليات
+  const recent = [
+    ...DB.purchases.slice(-3).map(p => ({type:'مشتريات', details:p.name, amount:p.total})),
+    ...DB.expenses.slice(-3).map(e => ({type:'صرفيات', details:e.details, amount:e.amount})),
+    ...DB.workerExpenses.slice(-3).map(w => ({type:'صرفيات عمال', details:w.worker+' - '+w.name, amount:w.amount}))
+  ].slice(-8);
+
+  const t = document.getElementById('dashRecentTable');
+  if (recent.length === 0) {
+    t.innerHTML = '<tr><td colspan="4" style="color:#888;">لا توجد عمليات</td></tr>';
+  } else {
+    t.innerHTML = recent.map((r, i) =>
+      `<tr><td>${i+1}</td><td>${r.type}</td><td>${r.details}</td><td>${r.amount}</td></tr>`
+    ).join('');
+  }
+}
+
+/* ============================================================
+   الطباعة
+============================================================ */
+function printScreen(screenId) {
+  document.getElementById('printDate').textContent = new Date().toLocaleDateString('ar-EG') + ' - ' + new Date().toLocaleTimeString('ar-EG');
+  window.print();
+}
+
+/* ============================================================
+   تصدير PDF
+============================================================ */
+function exportPDF(screenId) {
+  const element = document.getElementById(screenId);
+  const opt = {
+    margin: 8,
+    filename: 'نظام_الإدارة_' + screenId + '_' + new Date().toISOString().slice(0,10) + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(element).save();
+}
+
+/* ============================================================
+   التهيئة الأولية
+============================================================ */
+function init() {
+  loadDB();
+  refreshDropdowns();
+  renderDynamicFields();
+  renderPurchases();
+  renderExpenses();
+  renderWorkers();
+  renderWorkerExpenses();
+  renderSettingsTables();
+  renderHomeCompanies();
+  refreshAll();
+  resetPurchaseForm();
+  resetExpenseForm();
+  resetWorkerForm();
+  resetWorkerExpenseForm();
+  document.getElementById('e_date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('w_date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('we_date').value = new Date().toISOString().slice(0,10);
+}
+init();
+</script>
+</body>
+</html>
